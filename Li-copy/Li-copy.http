@@ -4,5 +4,10 @@ GET {{baseURL}}/weatherforecast/
 Accept: application/json
 
 ###
-GET {{baseURL}}/api/users
+GET {{baseURL}}/api/User
+Accept: application/json
+
+###
+
+GET {{baseURL}}/api/User/userData
 Accept: application/json
