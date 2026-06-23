@@ -1,0 +1,1 @@
+Please read files: Li-copy\I-InterfaceLayer\LoanInterface\Notification\NotificationInterface.cs and Li-copy\I-InterfaceLayer\Notification\Notification.cs

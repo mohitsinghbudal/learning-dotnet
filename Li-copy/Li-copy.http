@@ -3,11 +3,19 @@
 GET {{baseURL}}/weatherforecast/
 Accept: application/json
 
-###
-GET {{baseURL}}/api/User
-Accept: application/json
 
 ###
 
 GET {{baseURL}}/api/User/userData
+Accept: application/json
+
+###
+
+GET {{baseURL}}/api/roles
+Accept: application/json  
+
+
+
+###
+GET {{baseURL}}/api/books
 Accept: application/json
