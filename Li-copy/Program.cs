@@ -1,4 +1,4 @@
-using Li_copy.DataLayer.Books;
+﻿using Li_copy.DataLayer.Books;
 using Li_copy.DataLayer.Roles;
 using Li_copy.DataLayer.UserDLL;
 using Li_copy.I_InterfaceLayer;
@@ -31,6 +31,9 @@ using Li_copy.ServiceLayer.LoanService;
 using Li_copy.I_InterfaceLayer.NotificationInterface;
 using Li_copy.ServiceLayer.NotificationService;
 using Li_copy.DataLayer.NotificationDLL;
+using Li_copy.I_InterfaceLayer.CategoryInterface;
+using Li_copy.DataLayer.CategoryDLL;
+using Li_copy.ServiceLayer.CategoryService;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,7 +61,7 @@ builder.Services.AddScoped<IUserDLL, UserDLL>();
 builder.Services.AddScoped<IloanDLL, LoanDLL>();
 builder.Services.AddScoped<IfineDLL, FineDLL>();
 builder.Services.AddScoped<INotificationDLL, NotificationDLL>();
-builder.Services.AddScoped<INotificationDLL, NotificationDLL>();
+builder.Services.AddScoped<ICategoryDLL, CategoryDLL>();
 
 //register service
 builder.Services.AddScoped<IRolesService, RoleService>();
@@ -67,8 +70,8 @@ builder.Services.AddScoped<ILogSignReq, UserServices>();
 builder.Services.AddScoped<IJwtServices, JwtServices>();
 builder.Services.AddScoped<IfineService, FineService>();
 builder.Services.AddScoped<IloanService, LoanService>();
-builder.Services.AddScoped<Li_copy.ServiceLayer.NotificationService.NotificationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICategoryServices, CategorySerive>();
 
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -88,8 +91,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         )
     };
 });
-var app = builder.Build();
 
+// Configure CORS Policy
+builder.Services.AddCors(options =>
+{
+    // 💡 Typo fixed here: "AllowAllLoacal" -> "AllowAllLocal"
+    options.AddPolicy("AllowAllLocal", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+var app = builder.Build();
+app.UseCors("AllowAllLocal");
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -97,6 +113,8 @@ if (app.Environment.IsDevelopment())
     //for swagger/scalar
     app.MapScalarApiReference();
 }
+
+
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

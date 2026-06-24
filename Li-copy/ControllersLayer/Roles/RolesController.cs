@@ -1,9 +1,12 @@
 ﻿using Li_copy.I_InterfaceLayer.RoleInterface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Li_copy.ControllersLayer.Roles
 {
+    
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class RolesController : ControllerBase

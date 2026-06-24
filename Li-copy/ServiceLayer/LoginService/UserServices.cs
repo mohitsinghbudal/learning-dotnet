@@ -17,40 +17,43 @@ namespace Li_copy.ServiceLayer.LoginService
                 _jwtServices = jwtServices;
                 _userDLL = userDLL;
             }
-            
-        public async Task<string?> LoginAsync(LoginReqDTO req)
-        {
 
+        public async Task<LoginResDTO?> LoginAsync(LoginReqDTO req)
+        {
             Console.WriteLine("reached service layer");
+
             var user = await _userDLL.GetUserByEmailAsync(req.Email);
 
-            if(user == null) {
+            if (user == null)
                 return null;
-            }
-        
-             bool isPasswordValid =
+
+            bool isPasswordValid =
                 BCrypt.Net.BCrypt.Verify(
                     req.PasswordHash,
                     user.PasswordHash);
 
             if (!isPasswordValid)
-            {
                 return null;
-            }
 
             var token = _jwtServices.GenerateTokenAsync(user);
-            return token;
+
+            return new LoginResDTO
+            {
+                Token = token,
+                Id = user.Id,
+                FullName = user.FullName,
+                Message = "Login successful",
+                RoleId = user.RoleId
+                
+            };
         }
 
         public async Task<bool> SignupAsync(SignUpReqDTO request)
         {
-            var existingUser =
-                await _userDLL
-                    .GetUserByEmailAsync(request.Email);
-
+            var existingUser = await _userDLL.GetUserByEmailAsync(request.Email);
             if (existingUser != null)
             {
-                return false;
+                return false; // User already exists
             }
 
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -65,14 +68,11 @@ namespace Li_copy.ServiceLayer.LoginService
                 CreatedAt = DateTime.UtcNow
             };
 
-            int userId =
-                await _userDLL
-                    .CreateUserAsync(user);
+            // Saves user and updates user object with new Id
+            await _userDLL.CreateUserAsync(user);
 
-            return userId > 0;
-
-
-
+            return true; // Successfully created
         }
 
-}}
+    }
+}

@@ -1,10 +1,12 @@
 using Li_copy.I_InterfaceLayer.LoanInterface;
 using Li_copy.Models.Loans;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Li_copy.ControllersLayer.Loans
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class LoansController : ControllerBase

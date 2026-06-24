@@ -1,10 +1,12 @@
 ﻿using Li_copy.I_InterfaceLayer.FineInterface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Li_copy.Models.DTO;
 
 namespace Li_copy.ControllersLayer.Fines
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class FinesController : ControllerBase
@@ -33,6 +35,13 @@ namespace Li_copy.ControllersLayer.Fines
             if (fine == null) return NotFound();
             return Ok(fine);
         }
+
+        //[HttpPost("pay")]
+        //public async Task<IAsyncResult> PayFineAsync(int loanId)
+        //{
+        //    var fine = await _fineService.PayFineAsync(loanId);
+        //    return Ok(fine);
+        //}
 
         [HttpPost("{id}/callback")]
         public async Task<IActionResult> PaymentCallback(int id, [FromBody] PaymentCallbackDTO dto)

@@ -11,6 +11,7 @@ namespace Li_copy.ServiceLayer.NotificationService
         {
             _notificationRepository = notificationRepository;
         }
+
         public Task<int> CreateAsync(Notification notification)
         {
             return _notificationRepository.CreateAsync(notification);
@@ -30,9 +31,16 @@ namespace Li_copy.ServiceLayer.NotificationService
 
             await _notificationRepository.CreateAsync(notification);
         }
+
         public Task<IEnumerable<Notification>> GetAdminNotificationsAsync()
         {
             return _notificationRepository.GetAdminNotificationsAsync();
+        }
+
+        // NEW: Pulls librarian alerts from the data layer
+        public Task<IEnumerable<Notification>> GetLibrarianNotificationsAsync()
+        {
+            return _notificationRepository.GetLibrarianNotificationsAsync();
         }
 
         public Task<bool> MarkAsReadAsync(int id)
@@ -40,9 +48,26 @@ namespace Li_copy.ServiceLayer.NotificationService
             return _notificationRepository.MarkAsReadAsync(id);
         }
 
-        public Task NotifyBookAddedAsync(string title, string message)
+        public async Task NotifyBorrowRequestedAsync(int requestId, int studentId, int bookId)
         {
-            throw new NotImplementedException();
+            string message = $"Student (ID: {studentId}) requested to borrow Book ID: {bookId}. (Request ID: {requestId})";
+            int librarianRoleId = 3;
+
+            await _notificationRepository.CreateNotificationAsync(message, librarianRoleId, "BORROW_REQ");
+        }
+
+        // NEW: Computes unread alerts for Admins directly in the service layer
+        public async Task<int> GetAdminUnreadCountAsync()
+        {
+            var all = await _notificationRepository.GetAdminNotificationsAsync();
+            return all.Count(x => !x.IsRead);
+        }
+
+        // NEW: Computes unread alerts for Librarians directly in the service layer
+        public async Task<int> GetLibrarianUnreadCountAsync()
+        {
+            var all = await _notificationRepository.GetLibrarianNotificationsAsync();
+            return all.Count(x => !x.IsRead);
         }
     }
 }

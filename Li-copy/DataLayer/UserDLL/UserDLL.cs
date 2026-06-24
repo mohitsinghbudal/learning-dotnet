@@ -29,10 +29,11 @@ namespace Li_copy.DataLayer.UserDLL
 
             return await _conn.QueryFirstOrDefaultAsync<User>(
                 sql,
-                new { Email = email });
+                new { Email = email  });
         }
-        public async Task<int> CreateUserAsync(User user)
+        public async Task<User> CreateUserAsync(User user)
         {
+
             string sql = @"
                 INSERT INTO Users
                 (
@@ -55,9 +56,12 @@ namespace Li_copy.DataLayer.UserDLL
 
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
-            return await _conn.ExecuteScalarAsync<int>(
+            int newId = await _conn.ExecuteScalarAsync<int>(
                 sql,
                 user);
+            user.Id = newId;
+
+            return user;
         } 
     }
 }

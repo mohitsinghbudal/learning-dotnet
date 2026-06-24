@@ -8,6 +8,8 @@
         Task<bool> ProcessPaymentCallbackAsync(int fineId, string transactionId, string callbackJson, string paymentStatus);
         Task<IEnumerable<Fine>> GetAllFinesAsync();
         Task<Fine?> GetFineByIdAsync(int id);
+
+        //Task<>
     }
 }
 //namespace Li_copy.I_InterfaceLayer.FineInterface

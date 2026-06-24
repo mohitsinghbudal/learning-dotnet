@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="ControllersLayer\Categories\" />
+    <Folder Include="I-InterfaceLayer\LoanInterface\Notification\" />
   </ItemGroup>
 
 </Project>

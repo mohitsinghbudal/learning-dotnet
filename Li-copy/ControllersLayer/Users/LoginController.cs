@@ -20,20 +20,20 @@ namespace Li_copy.Controllers.Users
 
 
 
-        [HttpPost]
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginReqDTO request)
         {
             Console.WriteLine("login attempted");
             
 
-            var token = await _login.LoginAsync(request);
+            var result = await _login.LoginAsync(request);
             
-            if(token == null)
+            if(result == null)
             {
                 return Unauthorized("Inavalid Email or Password");
             }
 
-            return Ok(new { Token = token });
+            return Ok(result);
         }
 
         [HttpPost("signup")]
@@ -46,7 +46,7 @@ namespace Li_copy.Controllers.Users
                 return BadRequest(new { message = "User Already exists or invalid data" });
             }
 
-            return Ok(new { message = "user created successfully " });
+            return Ok(new { message = "Registration successful!" });
         }
 
 
