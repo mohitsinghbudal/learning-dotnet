@@ -11,7 +11,7 @@ namespace Li_copy.I_InterfaceLayer.NotificationInterface
         Task<IEnumerable<Notification>> GetLibrarianNotificationsAsync();
 
         Task<bool> MarkAsReadAsync(int id);
-        Task<int> CreateNotificationAsync(string message, int targetRoleId, string notificationType);
+        Task<int> CreateNotificationAsync(string title, string message, string targetRole, string notificationType, int userId);
     }
 
     public interface INotificationService

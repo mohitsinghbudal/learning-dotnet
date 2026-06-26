@@ -10,16 +10,21 @@ namespace Li_copy.Models.Loans
 
         public int UserId { get; set; }
 
-        public DateTime IssueDate { get; set; }
+        public DateTime? IssuedDate { get; set; }
 
-        public DateTime DueDate { get; set; }
+        public DateTime? DueDate { get; set; }
 
         public string Status { get; set; } = string.Empty;
 
+        public int? VerifiedByUserId { get; set; }
 
-        public DateTime BorrowDate { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+
+        public DateTime? BorrowDate { get; set; }
 
         public DateTime? ReturnDate { get; set; }
+
+        public int? IssuedByUserId { get; set; }
 
     }
 }

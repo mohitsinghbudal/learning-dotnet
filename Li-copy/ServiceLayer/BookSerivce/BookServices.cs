@@ -1,6 +1,7 @@
 ﻿using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.I_InterfaceLayer.NotificationInterface;
 using Li_copy.Models.Book;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Li_copy.ServiceLayer.BookSerivces
 {
@@ -15,6 +16,10 @@ namespace Li_copy.ServiceLayer.BookSerivces
             _notificationService = notificationService;
         }
 
+        public async Task<IEnumerable<Book>> GetVerifiedBookAsync()
+        {
+            return await _booksDLL.GetVerifiedBookAsync();
+        }
         public async Task<IEnumerable<Book>> GetBooksAsync()
         {
             return await _booksDLL.GetBooksAsync();
@@ -38,6 +43,7 @@ namespace Li_copy.ServiceLayer.BookSerivces
 
         public async Task<bool> VerifyBookAsync(int bookId, int roleId, int adminId)
         {
+
             if (roleId != 1)
             {
                 return false;
@@ -63,14 +69,14 @@ namespace Li_copy.ServiceLayer.BookSerivces
             return false;
         }
 
-        public async Task<bool> ApproveBorrowRequestAsync(int requestId, int roleId, int librarianId)
+        public async Task<bool> ApproveBorrowRequestAsync(int LoanId, int roleId, int librarianId)
         {
-            if (roleId != 3 && roleId != 1)
+            if (roleId != 3)
             {
                 return false;
             }
 
-            return await _booksDLL.ApproveBorrowRequestAsync(requestId, librarianId);
+            return await _booksDLL.ApproveBorrowRequestAsync(LoanId, librarianId);
         }
     }
 }

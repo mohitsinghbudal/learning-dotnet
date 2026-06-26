@@ -46,14 +46,17 @@ namespace Li_copy.DataLayer.FineDLL
 
         public async Task<IEnumerable<Fine>> GetAllFinesAsync()
         {
-            string sql = "SELECT * FROM Fines";
+            string sql = @"
+        SELECT f.*, l.UserId 
+        FROM Fines f
+        INNER JOIN Loans l ON f.LoanId = l.Id"; ;
             return await _dbConnection.QueryAsync<Fine>(sql);
         }
 
-        public async Task<Fine?> GetFineByIdAsync(int id)
+        public async Task<Fine?> GetFineByIdAsync(int userId)
         {
-            string sql = "SELECT * FROM Fines WHERE Id = @Id";
-            return await _dbConnection.QueryFirstOrDefaultAsync<Fine>(sql, new { Id = id });
+            string sql = "SELECT * FROM Fines WHERE UserId = @Id";
+            return await _dbConnection.QueryFirstOrDefaultAsync<Fine>(sql, new { Id = userId });
         }
     }
 }

@@ -3,6 +3,7 @@ using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.Models.Book;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
+using System.Data.Common;
 
 namespace Li_copy.DataLayer.Books
 {
@@ -15,6 +16,11 @@ namespace Li_copy.DataLayer.Books
             _dbConn = dbconn;
         }
 
+        public async Task<IEnumerable<Book>> GetVerifiedBookAsync()
+        {
+            string sql = "SELECT * FROM Books WHERE IsApproved = 1";
+            return await _dbConn.QueryAsync<Book>(sql);
+        }
         public async Task<IEnumerable<Book>> GetBooksAsync()
         {
             string sql = "SELECT * FROM Books";
@@ -24,7 +30,7 @@ namespace Li_copy.DataLayer.Books
         public async Task<int> AddBookAsync(Book book)
         {
             string sql = @"
-INSERT INTO Books 
+INSERT INTO Books
 (
     Title,
     Author,
@@ -33,7 +39,7 @@ INSERT INTO Books
     TotalCopies,
     AvailableCopies,
     YearPublished,
-    AddedByUserId,
+    ApprovedByUserId,
     IsApproved
 )
 VALUES
@@ -45,13 +51,13 @@ VALUES
     @TotalCopies,
     @AvailableCopies,
     @YearPublished,
-    @CreatedByUserId, -- Note: Mapped to your model property name from the controller
+    @ApprovedByUserId,
     0
 );
+
 SELECT CAST(SCOPE_IDENTITY() as int);";
 
-            var response = await _dbConn.ExecuteScalarAsync<int>(sql, book);
-            return response;
+            return await _dbConn.ExecuteScalarAsync<int>(sql, book);
         }
 
         public async Task<IEnumerable<Book>> GetUnverifiedBooksAsync()
@@ -69,35 +75,68 @@ WHERE IsApproved = 0";
             string sql = @"
 UPDATE Books
 SET IsApproved = 1,
-    ApprovedByUserId = @adminId
-WHERE Id = @bookId";
+    AddedBy = @adminId
+WHERE Id = @bookId
+  AND IsApproved = 0";
 
-            return await _dbConn.ExecuteAsync(sql, new { bookId, adminId });
+            int rowsAffected = await _dbConn.ExecuteAsync(
+                sql,
+                new { bookId, adminId }
+            );
+
+            return rowsAffected;
         }
 
         // NEW: Creates a new pending borrow ledger request for students
         public async Task<int> CreateBorrowRequestAsync(int bookId, int studentId)
         {
-            // First check if copies are actually available before creating a request
-            string checkSql = "SELECT AvailableCopies FROM Books WHERE Id = @bookId AND IsApproved = 1";
-            int availableCopies = await _dbConn.ExecuteScalarAsync<int>(checkSql, new { bookId });
+            string checkSql = @"
+        SELECT AvailableCopies
+        FROM Books
+        WHERE Id = @bookId
+          AND IsApproved = 1";
 
-            if (availableCopies <= 0)
+            int? availableCopies = await _dbConn.ExecuteScalarAsync<int?>(
+                checkSql,
+                new { bookId });
+
+            if (availableCopies == null || availableCopies <= 0)
             {
-                throw new InvalidOperationException("This book is currently out of stock or unverified.");
+                throw new InvalidOperationException(
+                    "This book is currently out of stock or unverified.");
             }
 
             string sql = @"
-INSERT INTO BorrowRequests (BookId, StudentId, Status, RequestDate)
-VALUES (@bookId, @studentId, 'Pending', GETDATE());
-SELECT CAST(SCOPE_IDENTITY() as int);";
+        INSERT INTO Loans
+        (
+            BookId,
+            UserId,
+            ReturnDate,
+            DueDate,            
+            Status,
+            BorrowDate
+        )
+        VALUES
+        (
+            @bookId,
+            @studentId,
+            DATEADD(DAY, 14, GETDATE()),
+            DATEADD(DAY, 14, GETDATE()),
+            'Pending',
+            GETDATE()
+        );
 
-            return await _dbConn.ExecuteScalarAsync<int>(sql, new { bookId, studentId });
+        SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await _dbConn.ExecuteScalarAsync<int>(
+                sql,
+                new { bookId, studentId });
         }
 
         // NEW: Processes approval actions and safely updates remaining book metrics
-        public async Task<bool> ApproveBorrowRequestAsync(int requestId, int librarianId)
+        public async Task<bool> ApproveBorrowRequestAsync(int LoanId, int librarianId)
         {
+            Console.WriteLine("reached dll");
             // Open connection if closed to cleanly handle explicit transactions
             if (_dbConn.State == ConnectionState.Closed) _dbConn.Open();
 
@@ -106,18 +145,20 @@ SELECT CAST(SCOPE_IDENTITY() as int);";
                 try
                 {
                     // 1. Fetch the BookId associated with this specific borrow ledger transaction
-                    string getBookIdSql = "SELECT BookId FROM BorrowRequests WHERE Id = @requestId AND Status = 'Pending'";
-                    int bookId = await _dbConn.ExecuteScalarAsync<int>(getBookIdSql, new { requestId }, transaction);
+                    string getBookIdSql = "SELECT BookId FROM Loans WHERE Id = @LoanId AND Status = 'Pending'";
+                    int bookId = await _dbConn.ExecuteScalarAsync<int>(getBookIdSql, new { LoanId }, transaction);
 
                     if (bookId <= 0) return false; // Request doesn't exist or isn't in a 'Pending' state
 
                     // 2. Update status of the borrow records index flag to 'Approved'
                     string updateRequestSql = @"
-UPDATE BorrowRequests 
-SET Status = 'Approved', ApprovedByUserId = @librarianId, ApprovalDate = GETDATE() 
-WHERE Id = @requestId";
+UPDATE Loans
+SET Status = 'Approved', 
+IssuedByUserId = @librarianId, 
+IssueDate = GETDATE() 
+WHERE Id = @LoanId";
 
-                    await _dbConn.ExecuteAsync(updateRequestSql, new { requestId, librarianId }, transaction);
+                    await _dbConn.ExecuteAsync(updateRequestSql, new { LoanId, librarianId }, transaction);
 
                     // 3. Decrement the availability counter safely on the primary collection records matrix
                     string decrementInventorySql = @"
@@ -143,6 +184,20 @@ WHERE Id = @bookId AND AvailableCopies > 0";
                     throw;
                 }
             }
+        }
+        public async Task IncrementAvailableCopiesAsync(int bookId)
+        {
+            string sql = @"
+        UPDATE Books 
+        SET AvailableCopies = AvailableCopies + 1 
+        WHERE Id = @BookId AND AvailableCopies < TotalCopies";
+
+            await _dbConn.ExecuteAsync(sql, new { BookId = bookId });
+        }
+
+        public Task DecrementAvailableCopiesAsync(int bookId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

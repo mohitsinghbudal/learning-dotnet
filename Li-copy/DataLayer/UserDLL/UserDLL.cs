@@ -3,6 +3,7 @@ using Li_copy.Models.Users;
 using Li_copy.I_InterfaceLayer.UserInterface;
 using System.Data;
 using System.Data.Common;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Li_copy.DataLayer.UserDLL
 {
@@ -27,9 +28,11 @@ namespace Li_copy.DataLayer.UserDLL
                 FROM Users
                 WHERE Email = @Email";
 
-            return await _conn.QueryFirstOrDefaultAsync<User>(
+           return await _conn.QueryFirstOrDefaultAsync<User>(
                 sql,
                 new { Email = email  });
+            
+            
         }
         public async Task<User> CreateUserAsync(User user)
         {
@@ -56,12 +59,13 @@ namespace Li_copy.DataLayer.UserDLL
 
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
-            int newId = await _conn.ExecuteScalarAsync<int>(
-                sql,
-                user);
-            user.Id = newId;
+            
+                int newId = await _conn.ExecuteScalarAsync<int>(sql, user);
 
-            return user;
+                user.Id = newId;
+
+                return user;
+            
         } 
     }
 }

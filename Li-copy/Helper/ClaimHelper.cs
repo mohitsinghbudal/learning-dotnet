@@ -12,8 +12,8 @@ namespace Li_copy.Helper
 
         public static int GetRoleId(ClaimsPrincipal user)
         {
-            if (user?.Identity?.IsAuthenticated != true)
-                throw new UnauthorizedAccessException("User is not authenticated.");
+            //if (user?.Identity?.IsAuthenticated != true)
+                //throw new UnauthorizedAccessException("User is not authenticated.");
 
             var claim = user.FindFirst("RoleId");
             var value = claim?.Value;

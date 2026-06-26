@@ -1,7 +1,12 @@
-﻿using Li_copy.I_InterfaceLayer.FineInterface;
+﻿using Li_copy.I_InterfaceLayer.BookInterface;
+using Li_copy.I_InterfaceLayer.FineInterface;
 using Li_copy.I_InterfaceLayer.LoanInterface;
+using Li_copy.Models.Book;
 using Li_copy.Models.Fine;
 using Li_copy.Models.Loans;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Li_copy.ServiceLayer.LoanService
 {
@@ -9,11 +14,15 @@ namespace Li_copy.ServiceLayer.LoanService
     {
         private readonly IloanDLL _loanRepository;
         private readonly IfineDLL _fineDLL;
-        public LoanService(IloanDLL loanRepository,IfineDLL ifineDLL)
+        private readonly IBooksDLL _bookDLL;
+
+        public LoanService(IloanDLL loanRepository, IfineDLL ifineDLL, IBooksDLL booksDLL)
         {
             _loanRepository = loanRepository;
             _fineDLL = ifineDLL;
+            _bookDLL = booksDLL;
         }
+
         public async Task<IEnumerable<Loan>> GetAllLoansAsync()
         {
             return await _loanRepository.GetAllLoansAsync();
@@ -39,43 +48,86 @@ namespace Li_copy.ServiceLayer.LoanService
             return await _loanRepository.DeleteLoanAsync(id);
         }
 
-        public async Task<bool> ReturnBookAsync(int loanId, DateTime returnDate)
+        // Step 1: Student initiates the drop-off request
+        public async Task<bool> ReturnBookAsync(int loanId)
+        {
+            // Fetch the existing loan details
+            var loan = await _loanRepository.GetLoanByIdAsync(loanId);
+            if (loan == null || loan.Status == "Returned" || loan.Status == "Pending Return") return false;
+
+            // Update the loan record status to alert teachers on frontend dashboard
+            loan.ReturnDate = DateTime.Now;
+            loan.Status = "Pending Return";
+
+            return await _loanRepository.UpdateLoanAsync(loan);
+        }
+
+        // Step 2: Teacher verifies the return conditions, processes fines, and releases stock
+        public async Task<int> VerifyReturnAsync(int loanId, int teacherId)
         {
             var loan = await _loanRepository.GetLoanByIdAsync(loanId);
-            if (loan == null) return false;
+            if (loan == null || loan.Status != "Pending Return") return 102; // Fault/Error
 
-            loan.DueDate = returnDate;
             loan.Status = "Returned";
+            loan.VerifiedByUserId = teacherId;
+            loan.VerifiedAt = DateTime.Now;
 
-            await _loanRepository.UpdateLoanAsync(loan);
+            var inventoryReleased = await _loanRepository.UpdateAndReleaseInventoryAsync(loan);
+            if (!inventoryReleased) return 102; // Fault/Error
 
-            if (returnDate > loan.DueDate)
+            // Late return check
+            if (loan.ReturnDate.HasValue && loan.DueDate.HasValue && loan.ReturnDate.Value.Date > loan.DueDate.Value.Date)
             {
-                int extraDays = (returnDate.Date - loan.DueDate.Date).Days;
-                if (extraDays > 0)
-                {
-                    decimal fineAmount = extraDays * 5.0m;
+                int extraDays = (loan.ReturnDate.Value.Date - loan.DueDate.Value.Date).Days;
+                decimal fineAmount = extraDays * 5.0m;
 
-                    var existingFine = await _fineDLL.GetFineByLoanIdAsync(loanId);
-                    if (existingFine == null)
-                    {
-                        var newFine = new Fine
-                        {
-                            LoanId = loanId,
-                            Amount = fineAmount,
-                            IsPaid = false,
-                            PaymentStatus = "Pending"
-                        };
-                        await _fineDLL.CreateFineAsync(newFine);
-                    }
-                    else if (!existingFine.IsPaid)
-                    {
-                        existingFine.Amount = fineAmount;
-                        await _fineDLL.UpdateFineAsync(existingFine);
-                    }
+                var existingFine = await _fineDLL.GetFineByLoanIdAsync(loanId);
+                if (existingFine == null)
+                {
+                    await _fineDLL.CreateFineAsync(new Fine { LoanId = loanId, Amount = fineAmount, IsPaid = false, PaymentStatus = "Pending" });
                 }
+                else if (!existingFine.IsPaid)
+                {
+                    existingFine.Amount = fineAmount;
+                    await _fineDLL.UpdateFineAsync(existingFine);
+                }
+
+                return 101; // Fine exists, redirect to payment
             }
-            return true;
+
+            return 100; // Success, no fine
+        }
+
+        public async Task<IEnumerable<LoanHistoryDto>> GetPersonalHistoryAsync(int userId, int roleId)
+        {
+            // Restrict personal history access to Student (2) or Teacher (3)
+            if (roleId != 2 && roleId != 3)
+            {
+                throw new UnauthorizedAccessException("Unauthorized role access requested.");
+            }
+
+            return await _loanRepository.GetPersonalBorrowHistoryAsync(userId);
+        }
+
+        public async Task<IEnumerable<LoanHistoryDto>> GetGlobalBorrowRecordsAsync(int roleId)
+        {
+            // Restrict global lists strictly to Teacher (3) or Admin (1) to match your Controller layer policies
+            if (roleId != 3 && roleId != 1)
+            {
+                throw new UnauthorizedAccessException("Only Teachers or Higher Authorities can view all records.");
+            }
+
+            return await _loanRepository.GetAllBorrowedBooksAsync();
+        }
+
+        public async Task<IEnumerable<LoanDTO?>> GetUserLoanAsync(int id)
+        {
+            return await _loanRepository.GetUserLoanAsync(id);
+        }
+
+        public async Task<bool> VerifyBorrowAsync(int loanId, int issuedByUserId)
+        {
+            return await _loanRepository.VerifyBorrowAsync(loanId, issuedByUserId);
         }
     }
 }

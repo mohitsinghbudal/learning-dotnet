@@ -19,3 +19,6 @@ Accept: application/json
 ###
 GET {{baseURL}}/api/books
 Accept: application/json
+###
+GET {{baseURL}}/api/Fines
+Accept: application/json

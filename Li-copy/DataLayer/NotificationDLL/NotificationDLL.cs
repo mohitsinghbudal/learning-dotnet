@@ -48,34 +48,41 @@ namespace Li_copy.DataLayer.NotificationDLL
             return await _db.ExecuteAsync(sql, new { Id = id }) > 0;
         }
 
-        public async Task<int> CreateNotificationAsync(string message, int targetRoleId, string notificationType)
+        public async Task<int> CreateNotificationAsync(string title, string message, string targetRole, string notificationType, int userId)
         {
+            // 1. Fixed the duplicate TargetRole
+            // 2. Included the required Title column
+            // 3. Normalized parameters to match the Dapper anonymous object properties
             string sql = @"
-INSERT INTO Notifications 
-(
-    Message, 
-    TargetRoleId, 
-    Type, 
-    IsRead, 
-    CreatedDate,
-    TargetRole
-)
-VALUES 
-(
-    @message, 
-    @targetRoleId, 
-    @notificationType, 
-    0, 
-    GETDATE(),
-    CASE WHEN @targetRoleId = 1 THEN 'ADMIN' WHEN @targetRoleId = 3 THEN 'LIBRARIAN' ELSE 'USER' END
-);
-SELECT CAST(SCOPE_IDENTITY() as int);";
+        INSERT INTO Notifications (
+            Title,
+            Message, 
+            Type, 
+            IsRead, 
+            CreatedAt,
+            CreatedBy,
+            TargetRole
+        )
+        VALUES (
+            @title,
+            @message, 
+            @notificationType, 
+            0, 
+            GETDATE(),
+            @userId,
+            @targetRole
+        );
+        
+        SELECT CAST(SCOPE_IDENTITY() as int);";
 
+            // Ensure all variables referenced via '@' in the query match the object keys below
             var result = await _db.ExecuteScalarAsync<int>(sql, new
             {
+                title,
                 message,
-                targetRoleId,
-                notificationType
+                notificationType,
+                userId,
+                targetRole
             });
 
             return result;

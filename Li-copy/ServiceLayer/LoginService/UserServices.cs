@@ -24,18 +24,23 @@ namespace Li_copy.ServiceLayer.LoginService
 
             var user = await _userDLL.GetUserByEmailAsync(req.Email);
 
-            if (user == null)
+            if (user == null){
+                Console.WriteLine("user not found");
                 return null;
+                }
 
             bool isPasswordValid =
                 BCrypt.Net.BCrypt.Verify(
                     req.PasswordHash,
                     user.PasswordHash);
 
-            if (!isPasswordValid)
-                return null;
-
+            
             var token = _jwtServices.GenerateTokenAsync(user);
+
+            if(token == null)
+            {
+                Console.WriteLine("no token generated");
+            }
 
             return new LoginResDTO
             {

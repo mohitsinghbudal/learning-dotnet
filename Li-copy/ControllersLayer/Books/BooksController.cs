@@ -2,13 +2,14 @@
 using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.I_InterfaceLayer.RoleInterface;
 using Li_copy.Models.Book;
+using Li_copy.Models.Roles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Li_copy.ControllersLayer.Books
 {
-    [Authorize]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     [ApiController]
     public class BooksController : ControllerBase
@@ -20,18 +21,43 @@ namespace Li_copy.ControllersLayer.Books
             _bookService = bookService;
         }
 
+        [AllowAnonymous]
+
+        //global books read
         [HttpGet]
         public async Task<IActionResult> GetBooksAsync()
         {
             var roles = await _bookService.GetBooksAsync();
             return Ok(roles);
         }
+        [AllowAnonymous]
+        [HttpGet("approved")]
+        public async Task<IActionResult> GetVerifiedBookAsync()
+        {
+            var books = await _bookService.GetVerifiedBookAsync();
+            return Ok(books);
 
+        }
         [HttpPost]
         public async Task<IActionResult> AddBook([FromBody] Book book)
         {
             var roleId = ClaimsHelper.GetRoleId(User);
             var userId = ClaimsHelper.GetUserId(User);
+
+            Console.WriteLine($"RoleId = {roleId}");
+
+            foreach (var claim in User.Claims)
+            {
+                Console.WriteLine($"{claim.Type} : {claim.Value}");
+            } 
+
+            Console.WriteLine("we reached inside book add :"+roleId + userId);
+            if (roleId != 3 && roleId!=1 )
+            {
+                return Forbid();
+            }
+
+
 
             book.CreatedByUserId = userId;
 
@@ -47,8 +73,7 @@ namespace Li_copy.ControllersLayer.Books
             }
         }
 
-        [Authorize]
-        [HttpPost("verify/{id}")]
+        [HttpPost("verify/newBook/{id}")]
         public async Task<IActionResult> VerifyBook(int id)
         {
             var roleId = ClaimsHelper.GetRoleId(User);
@@ -57,41 +82,24 @@ namespace Li_copy.ControllersLayer.Books
             var result = await _bookService.VerifyBookAsync(id, roleId, adminId);
 
             if (!result)
-                return Forbid();
+            {
+                return BadRequest("Book not found or already verified.");
+            }
 
-            return Ok("Book verified");
+            return Ok("Book verified successfully.");
+
         }
-
-        //[HttpPost("borrow")]
-        //public async Task<IActionResult> BorrowBookAsync()
-        //{
-        //    var roleId = ClaimsHelper.GetRoleId(User);
-        //    var adminId = ClaimsHelper.GetUserId(User);
-
-        //}
-
-        //[HttpPost("borrow/approve/{id}")]
-        //public async Task<IActionResult> ApproveBorrowAsync(int id)
-        //{
-        //    var roleId = ClaimsHelper.GetRoleId(User);
-        //    var adminId = ClaimsHelper.GetUserId(User);
-
-
-        //}
 
         [HttpPost("borrow")]
         public async Task<IActionResult> BorrowBookAsync([FromBody] BorrowRequestDto request)
         {
-            if (request == null || request.BookId <= 0)
-                return BadRequest("Invalid book request payload.");
+            Console.WriteLine("reached inside borrow");
 
-            // Return 401 if the caller is not authenticated instead of allowing the helper to throw
-            if (User?.Identity?.IsAuthenticated != true)
-                return Unauthorized();
 
             var roleId = ClaimsHelper.GetRoleId(User);
             var studentId = ClaimsHelper.GetUserId(User);
 
+           
             try
             {
                 // Passes control to the application layer to create a pending request records
@@ -108,16 +116,20 @@ namespace Li_copy.ControllersLayer.Books
             }
         }
 
-        [HttpPost("borrow/approve/{id}")]
-        public async Task<IActionResult> ApproveBorrowAsync(int id)
+        [HttpPost("borrow/approve/{LoanId}")]
+        public async Task<IActionResult> ApproveBorrowAsync(int LoanId)
         {
             var roleId = ClaimsHelper.GetRoleId(User);
             var librarianId = ClaimsHelper.GetUserId(User);
 
+            Console.WriteLine(LoanId + librarianId);
+            Console.WriteLine($"RoleId = {roleId}");
+            Console.WriteLine($"UserId = {librarianId}");
+
             try
             {
                 // Pass to the service layer where it checks if roleId == 3 (Librarian) or 1 (Admin)
-                var result = await _bookService.ApproveBorrowRequestAsync(id, roleId, librarianId);
+                var result = await _bookService.ApproveBorrowRequestAsync( LoanId,roleId, librarianId);
 
                 if (!result)
                     return Forbid(); // User lacks authority or request record doesn't exist

@@ -6,10 +6,17 @@ namespace Li_copy.I_InterfaceLayer.CategoryInterface
     {
          Task<IEnumerable<Category>> GetCategoryAsync();
         Task<int> GetCountAsync();
+        Task<string?> AddCategoryAsync(string name);
+        Task<int> DeleteCategoryAsync(int id);
+
     }
     public interface ICategoryServices
     {
         Task<int> getCountAsync();
         Task<IEnumerable<Category>> GetCategoryAsync();
-    }
+
+        Task<string?> AddCategoryAsync(string name);
+        Task<bool> DeleteCategoryAsync(int id);
+    
+}
 }

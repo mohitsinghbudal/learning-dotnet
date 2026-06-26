@@ -50,10 +50,19 @@ namespace Li_copy.ServiceLayer.NotificationService
 
         public async Task NotifyBorrowRequestedAsync(int requestId, int studentId, int bookId)
         {
+            // Added a title since the database schema marks it as NOT NULL
+            string title = "New Borrow Request";
             string message = $"Student (ID: {studentId}) requested to borrow Book ID: {bookId}. (Request ID: {requestId})";
-            int librarianRoleId = 3;
 
-            await _notificationRepository.CreateNotificationAsync(message, librarianRoleId, "BORROW_REQ");
+            Console.WriteLine(message);
+
+            // Matching your database schema expectations for TargetRole (string representation)
+            string targetRole = "LIBRARIAN";
+            string notificationType = "BORROW_REQ";
+
+            // Pass all 5 arguments matching the repository signature:
+            // CreateNotificationAsync(string title, string message, string targetRole, string notificationType, int userId)
+            await _notificationRepository.CreateNotificationAsync(title, message, targetRole, notificationType, studentId);
         }
 
         // NEW: Computes unread alerts for Admins directly in the service layer

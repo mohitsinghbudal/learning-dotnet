@@ -29,5 +29,24 @@ namespace Li_copy.DataLayer.CategoryDLL
             // QuerySingleAsync<int> returns a single integer result for the count
             return await _conn.QuerySingleAsync<int>(sql);
         }
+        public async Task<string?> AddCategoryAsync(string name)
+        {
+            string sql = @"
+        INSERT INTO Categories (Name)
+        VALUES (@name)";
+
+            int rowsAffected = await _conn.ExecuteAsync(sql, new { name });
+
+            return rowsAffected > 0 ? "Category added successfully" : null;
+        }
+
+        public async Task<int> DeleteCategoryAsync(int id)
+        {
+            string sql = @"
+        DELETE FROM Categories
+        WHERE Id = @id";
+
+            return await _conn.ExecuteAsync(sql, new { id });
+        }
     }
 }

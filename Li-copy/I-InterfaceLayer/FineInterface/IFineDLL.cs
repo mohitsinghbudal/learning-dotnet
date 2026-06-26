@@ -9,5 +9,7 @@
         Task<bool> UpdateFineAsync(Fine fine);
         Task<IEnumerable<Fine>> GetAllFinesAsync();
         Task<Fine?> GetFineByIdAsync(int id);
+
+      
     }
 }

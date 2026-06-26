@@ -1,4 +1,7 @@
-﻿using Li_copy.I_InterfaceLayer.FineInterface;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Li_copy.I_InterfaceLayer.FineInterface;
 using Li_copy.Models.Fine;
 
 namespace Li_copy.ServiceLayer.FineServices
@@ -12,9 +15,21 @@ namespace Li_copy.ServiceLayer.FineServices
             _fineRepository = fineRepository;
         }
 
-        public async Task<IEnumerable<Fine>> GetAllFinesAsync() => await _fineRepository.GetAllFinesAsync();
+        public async Task<IEnumerable<Fine>> GetAllFinesAsync() {
+
+            return await _fineRepository.GetAllFinesAsync();
+        }
         public async Task<Fine?> GetFineByIdAsync(int id) => await _fineRepository.GetFineByIdAsync(id);
         public async Task<Fine?> GetFineByLoanIdAsync(int loanId) => await _fineRepository.GetFineByLoanIdAsync(loanId);
+
+        public async Task<bool> UpdatePaymentStatusAsync(int fineId, string status)
+        {
+            var fine = await _fineRepository.GetFineByIdAsync(fineId);
+            if (fine == null) return false;
+
+            fine.PaymentStatus = status;
+            return await _fineRepository.UpdateFineAsync(fine);
+        }
 
         public async Task<bool> ProcessPaymentCallbackAsync(int fineId, string transactionId, string callbackJson, string paymentStatus)
         {
