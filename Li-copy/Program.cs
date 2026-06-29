@@ -68,6 +68,7 @@ builder.Services.AddScoped<IRolesService, RoleService>();
 builder.Services.AddScoped<IBookServices, BookServices>();
 builder.Services.AddScoped<ILogSignReq, UserServices>();
 builder.Services.AddScoped<IJwtServices, JwtServices>();
+builder.Services.AddHttpClient<IfineService, FineService>();
 builder.Services.AddScoped<IfineService, FineService>();
 builder.Services.AddScoped<IloanService, LoanService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();

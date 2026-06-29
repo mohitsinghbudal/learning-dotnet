@@ -1,12 +1,14 @@
-﻿using Li_copy.I_InterfaceLayer.FineInterface;
+﻿using Li_copy.Helper;
+using Li_copy.I_InterfaceLayer.FineInterface;
+using Li_copy.Models.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Li_copy.Models.DTO;
+using System;
 using System.Threading.Tasks;
 
 namespace Li_copy.ControllersLayer.Fines
 {
-    [AllowAnonymous]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class FinesController : ControllerBase
@@ -21,76 +23,69 @@ namespace Li_copy.ControllersLayer.Fines
         [HttpGet]
         public async Task<IActionResult> GetAll() => Ok(await _fineService.GetAllFinesAsync());
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        [HttpGet("loan")]
+        public async Task<IActionResult> GetByLoanId()
         {
-            var fine = await _fineService.GetFineByIdAsync(id);
-            if (fine == null) return NotFound();
-            return Ok(fine);
+            var roleId = ClaimsHelper.GetRoleId(User);
+            var userId = ClaimsHelper.GetUserId(User);
+
+            if (roleId != 2) return Unauthorized();
+
+            var fines = await _fineService.GetFineByUserIdAsync(userId);
+            return fines != null ? Ok(fines) : NotFound();
         }
 
-        [HttpGet("loan/{loanId}")]
-        public async Task<IActionResult> GetByLoanId(int loanId)
+        [HttpPost("initiate-payment/pay")]
+        public async Task<IActionResult> InitiatePayment([FromBody] EsewaPaymentRequestDTO request)
         {
-            var fine = await _fineService.GetFineByLoanIdAsync(loanId);
-            if (fine == null) return NotFound();
-            return Ok(fine);
-        }
-
-
-        // 🛠️ ADDED FOR PAYMENT INITIALIZATION FLOW
-        [HttpPost("{id}/initiate-payment")]
-        public async Task<IActionResult> InitiatePayment(int id)
-        {
-            var fine = await _fineService.GetFineByIdAsync(id);
-            if (fine == null) return NotFound(new { Message = "Fine record not found." });
-            if (fine.IsPaid) return BadRequest(new { Message = "This fine has already been settled." });
-
-            // Initialize local gateway lifecycle tracking flags
-            bool initialized = await _fineService.UpdatePaymentStatusAsync(id, "Initiated");
-            if (!initialized) return BadRequest(new { Message = "Unable to initialize transaction system metadata." });
-
-            return Ok(new { FineId = fine.Id, Amount = fine.Amount, Status = "Initiated" });
+            var result = await _fineService.PayFineAsync(request);
+            return result != null ? Ok(result) : NotFound("Fine Not Found or already paid");
         }
 
         [HttpPost("{id}/callback")]
-        public async Task<IActionResult> PaymentCallback(int id, [FromBody] PaymentCallbackDTO dto)
+        public async Task<IActionResult> PaymentCallback([FromBody] PaymentCallbackDTO dto)
         {
-            var result = await _fineService.ProcessPaymentCallbackAsync(id, dto.TransactionId, dto.RawCallbackJson, dto.PaymentStatus);
-            if (!result) return BadRequest(new { Message = "Failed to process payment integration sequence." });
-            return Ok(new { Message = "Payment state structural update synchronized successfully." });
+            if (dto == null) return BadRequest("Invalid callback.");
+            bool result = await _fineService.ProcessPaymentCallbackAsync(dto);
+            return result ? Ok(new { Message = "Payment processed successfully." }) : BadRequest("Payment processing failed.");
         }
+
         [HttpPost("{id}/verify-manually")]
         public async Task<IActionResult> VerifyManually(int id)
         {
-            // Reading the Teacher's user ID straight from the secure JWT token claims
-            var teacherIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            int teacherId = string.IsNullOrEmpty(teacherIdClaim) ? 0 : int.Parse(teacherIdClaim);
+            if (ClaimsHelper.GetRoleId(User) != 2) return Unauthorized();
 
             var fine = await _fineService.GetFineByIdAsync(id);
             if (fine == null) return NotFound(new { Message = "Fine record not found." });
             if (fine.IsPaid) return BadRequest(new { Message = "This fine has already been settled." });
 
-            // Update the fine state manually
-            fine.IsPaid = true;
-            fine.PaidDate = System.DateTime.Now;
-            fine.PaymentStatus = "Verified Manually";
-            fine.TransactionId = $"MANUAL-{System.Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
-
-            // Assigning the teacher's ID to your database's VerifiedByUserId column
-            // (Assuming your repository update method saves the state of the entity)
-            // fine.VerifiedByUserId = teacherId; 
-
             bool updated = await _fineService.ProcessPaymentCallbackAsync(
                 fine.Id,
-                fine.TransactionId,
+                $"MANUAL-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
                 "{\"type\": \"manual_verification\"}",
                 "COMPLETED"
             );
 
-            if (!updated) return BadRequest(new { Message = "Failed to update fine settlement state data." });
+            return updated ? Ok(new { Message = "Fine payment manually verified and settled successfully." })
+                           : BadRequest(new { Message = "Failed to update fine settlement state data." });
+        }
 
-            return Ok(new { Message = "Fine payment manually verified and settled successfully." });
+        [AllowAnonymous]
+        [HttpGet("esewa/success")]
+        public async Task<IActionResult> EsewaSuccess(string data)
+        {
+            if (string.IsNullOrEmpty(data)) return BadRequest("No payment data received.");
+
+            var result = await _fineService.ProcessEsewaSuccessAsync(data);
+            return result ? Ok("Payment Successful") : BadRequest("Payment verification failed.");
+        }
+
+        [AllowAnonymous]
+        [HttpGet("esewa/failure")]
+        public IActionResult EsewaFailure(string data)
+        {
+            // Handle failure logic here (e.g., log the failure, redirect to frontend failure page)
+            return Ok(new { Message = "Payment failed or was cancelled by the user.", Data = data });
         }
     }
 }
