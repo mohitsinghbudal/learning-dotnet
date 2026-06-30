@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.Models.Book;
+using Li_copy.Models.Category;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using System.Data.Common;
@@ -16,15 +17,21 @@ namespace Li_copy.DataLayer.Books
             _dbConn = dbconn;
         }
 
-        public async Task<IEnumerable<Book>> GetVerifiedBookAsync()
+
+        public async Task<int> GetCount()
         {
-            string sql = "SELECT * FROM Books WHERE IsApproved = 1";
-            return await _dbConn.QueryAsync<Book>(sql);
+            string sql = "SELECT Count(*) FROM Books";
+            return await _dbConn.ExecuteScalarAsync<int>(sql);
         }
-        public async Task<IEnumerable<Book>> GetBooksAsync()
+        public async Task<IEnumerable<Book>> GetVerifiedBookAsync(int offset, int pagesize)
         {
-            string sql = "SELECT * FROM Books";
-            return await _dbConn.QueryAsync<Book>(sql);
+            string sql = "SELECT * FROM Books WHERE IsApproved = 1 ORDER BY Id OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+            return await _dbConn.QueryAsync<Book>(sql, new {Offset = offset, PageSize = pagesize});
+        }
+        public async Task<IEnumerable<Book>> GetBooksAsync(int offset, int pagesize)
+        {
+            string sql = "SELECT * FROM Books ORDER BY Id OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+            return await _dbConn.QueryAsync<Book>(sql, new {Offset = offset, PageSize = pagesize});
         }
 
         public async Task<int> AddBookAsync(Book book)
@@ -194,6 +201,38 @@ WHERE Id = @bookId AND AvailableCopies > 0";
 
             await _dbConn.ExecuteAsync(sql, new { BookId = bookId });
         }
+
+        public async Task<IEnumerable<Book>> SearchBookAsync(string? title, string? author, string? category)
+        {
+            // Using a StringBuilder or clean spacing makes SQL manipulation safer/readable
+            var sql = @"SELECT b.* FROM Books b 
+                INNER JOIN Categories c ON b.CategoryId = c.Id 
+                WHERE 1 = 1";
+
+            var parameters = new DynamicParameters();
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                sql += " AND b.Title LIKE @Title";
+                parameters.Add("Title", $"%{title}%");
+            }
+
+            if (!string.IsNullOrWhiteSpace(author))
+            {
+                sql += " AND b.Author LIKE @Author";
+                parameters.Add("Author", $"%{author}%");
+            }
+
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                sql += " AND c.Name LIKE @Category";
+                parameters.Add("Category", $"%{category}%");
+            }
+
+            // FIX: Pass 'parameters' directly instead of wrapping it in an anonymous object
+            return await _dbConn.QueryAsync<Book>(sql, parameters);
+        }
+
 
         public Task DecrementAvailableCopiesAsync(int bookId)
         {
