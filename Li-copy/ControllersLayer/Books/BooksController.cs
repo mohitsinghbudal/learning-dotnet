@@ -2,10 +2,12 @@
 using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.I_InterfaceLayer.RoleInterface;
 using Li_copy.Models.Book;
+using Li_copy.Models.Loans;
 using Li_copy.Models.Roles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace Li_copy.ControllersLayer.Books
 {
@@ -21,20 +23,25 @@ namespace Li_copy.ControllersLayer.Books
             _bookService = bookService;
         }
 
-        [AllowAnonymous]
+
+        [HttpGet("count")]
+        public async Task<int> GetCount()
+        {
+            return await _bookService.GetCount();
+        }
 
         //global books read
         [HttpGet]
-        public async Task<IActionResult> GetBooksAsync()
+        public async Task<IActionResult> GetBooksAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var roles = await _bookService.GetBooksAsync();
+            var roles = await _bookService.GetBooksAsync(page, pageSize);
             return Ok(roles);
         }
-        [AllowAnonymous]
+        //[AllowAnonymous]
         [HttpGet("approved")]
-        public async Task<IActionResult> GetVerifiedBookAsync()
+        public async Task<IActionResult> GetVerifiedBookAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var books = await _bookService.GetVerifiedBookAsync();
+            var books = await _bookService.GetVerifiedBookAsync(page, pageSize);
             return Ok(books);
 
         }
@@ -49,10 +56,10 @@ namespace Li_copy.ControllersLayer.Books
             foreach (var claim in User.Claims)
             {
                 Console.WriteLine($"{claim.Type} : {claim.Value}");
-            } 
+            }
 
-            Console.WriteLine("we reached inside book add :"+roleId + userId);
-            if (roleId != 3 && roleId!=1 )
+            Console.WriteLine("we reached inside book add :" + roleId + userId);
+            if (roleId != 3 && roleId != 1)
             {
                 return Forbid();
             }
@@ -99,7 +106,7 @@ namespace Li_copy.ControllersLayer.Books
             var roleId = ClaimsHelper.GetRoleId(User);
             var studentId = ClaimsHelper.GetUserId(User);
 
-           
+
             try
             {
                 // Passes control to the application layer to create a pending request records
@@ -129,7 +136,7 @@ namespace Li_copy.ControllersLayer.Books
             try
             {
                 // Pass to the service layer where it checks if roleId == 3 (Librarian) or 1 (Admin)
-                var result = await _bookService.ApproveBorrowRequestAsync( LoanId,roleId, librarianId);
+                var result = await _bookService.ApproveBorrowRequestAsync(LoanId, roleId, librarianId);
 
                 if (!result)
                     return Forbid(); // User lacks authority or request record doesn't exist
@@ -141,12 +148,37 @@ namespace Li_copy.ControllersLayer.Books
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchByAsync( [FromQuery] string? title, [FromQuery] string? author, [FromQuery] string? category)
+        {
+           
+
+            try
+            {
+                var result = await _bookService.SearchBookAsync(title, author, category);
+
+                if (result == null )
+                {
+                    return NotFound(new { message = "No books found matching your criteria." });
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception here (e.g., _logger.LogError(ex, "..."));
+                return StatusCode(500, new { message = "An error occurred while processing your search." });
+            }
+        }
+
     }
+}
 
     // Small data transfer object wrapper for handling clean JSON payloads from React
     public class BorrowRequestDto
     {
         public int BookId { get; set; }
     }
-}
 

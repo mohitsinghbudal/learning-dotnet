@@ -101,6 +101,10 @@ namespace Li_copy.ServiceLayer.FineServices
                 signature = signature
             };
 
+            Console.WriteLine(message);
+            Console.WriteLine(signature);
+            Console.WriteLine(_configuration["Esewa:SecretKey"]);
+
             await _fineRepository.UpdatePaymentInitializationAsync(
                 fine.Id, transactionUuid, "{}", JsonSerializer.Serialize(response));
 

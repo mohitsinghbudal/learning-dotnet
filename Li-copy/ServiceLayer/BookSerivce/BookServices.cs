@@ -1,7 +1,9 @@
-﻿using Li_copy.I_InterfaceLayer.BookInterface;
+﻿using System;
+using Li_copy.I_InterfaceLayer.BookInterface;
 using Li_copy.I_InterfaceLayer.NotificationInterface;
 using Li_copy.Models.Book;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 
 namespace Li_copy.ServiceLayer.BookSerivces
 {
@@ -16,13 +18,26 @@ namespace Li_copy.ServiceLayer.BookSerivces
             _notificationService = notificationService;
         }
 
-        public async Task<IEnumerable<Book>> GetVerifiedBookAsync()
+        
+
+        public async Task<int> GetCount()
         {
-            return await _booksDLL.GetVerifiedBookAsync();
+            return await _booksDLL.GetCount();
         }
-        public async Task<IEnumerable<Book>> GetBooksAsync()
+
+        public async Task<IEnumerable<Book>> GetVerifiedBookAsync(int page, int pagesize)
         {
-            return await _booksDLL.GetBooksAsync();
+            // Ensure page is at least 1 to avoid negative OFFSET
+            if (page < 1) page = 1;
+
+            int offset = (page - 1) * pagesize;
+
+            return await _booksDLL.GetVerifiedBookAsync(offset, pagesize);
+        }
+        public async Task<IEnumerable<Book>> GetBooksAsync(int page, int pagesize)
+        {
+            int offset = (page - 1) * pagesize;
+            return await _booksDLL.GetBooksAsync(offset, pagesize);
         }
 
         public async Task<int> AddBookAsync(Book book, int roleId, int userId)
@@ -78,5 +93,12 @@ namespace Li_copy.ServiceLayer.BookSerivces
 
             return await _booksDLL.ApproveBorrowRequestAsync(LoanId, librarianId);
         }
+
+            public async Task<IEnumerable<Book>> SearchBookAsync(string? title, string? author, string? category)
+            {
+                return await _booksDLL.SearchBookAsync(title, author, category);
+            }
+
+        
     }
 }
