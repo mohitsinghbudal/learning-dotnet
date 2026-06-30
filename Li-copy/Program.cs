@@ -1,20 +1,34 @@
 ﻿using Li_copy.DataLayer.Books;
+using Li_copy.DataLayer.CategoryDLL;
+using Li_copy.DataLayer.FineDLL;
+using Li_copy.DataLayer.LoanDLL;
+using Li_copy.DataLayer.NotificationDLL;
+using Li_copy.DataLayer.Report;
 using Li_copy.DataLayer.Roles;
 using Li_copy.DataLayer.UserDLL;
 using Li_copy.I_InterfaceLayer;
 using Li_copy.I_InterfaceLayer.BookInterface;
+using Li_copy.I_InterfaceLayer.CategoryInterface;
+using Li_copy.I_InterfaceLayer.FineInterface;
 using Li_copy.I_InterfaceLayer.Jwt;
 using Li_copy.I_InterfaceLayer.Jwt;
 using Li_copy.I_InterfaceLayer.LoanInterface;
-using Li_copy.I_InterfaceLayer.Login_Sign;
-using Li_copy.I_InterfaceLayer.Login_Sign;
 using Li_copy.I_InterfaceLayer.LoanInterface;
-using Li_copy.ServiceLayer.LoginService;
+using Li_copy.I_InterfaceLayer.Login_Sign;
+using Li_copy.I_InterfaceLayer.Login_Sign;
+using Li_copy.I_InterfaceLayer.NotificationInterface;
+using Li_copy.I_InterfaceLayer.ReportInterface;
 using Li_copy.I_InterfaceLayer.RoleInterface;
 using Li_copy.I_InterfaceLayer.UserInterface;
 using Li_copy.ServiceLayer.BookSerivces;
+using Li_copy.ServiceLayer.CategoryService;
+using Li_copy.ServiceLayer.FineServices;
 using Li_copy.ServiceLayer.Jwt;
+using Li_copy.ServiceLayer.LoanService;
 using Li_copy.ServiceLayer.LoginService;
+using Li_copy.ServiceLayer.LoginService;
+using Li_copy.ServiceLayer.NotificationService;
+using Li_copy.ServiceLayer.ReportService;
 using Li_copy.Services;
 using Li_copy.Services.RolesServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,17 +37,6 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Data;
 using System.Text;
-using Li_copy.DataLayer.LoanDLL;
-using Li_copy.I_InterfaceLayer.FineInterface;
-using Li_copy.DataLayer.FineDLL;
-using Li_copy.ServiceLayer.FineServices;
-using Li_copy.ServiceLayer.LoanService;
-using Li_copy.I_InterfaceLayer.NotificationInterface;
-using Li_copy.ServiceLayer.NotificationService;
-using Li_copy.DataLayer.NotificationDLL;
-using Li_copy.I_InterfaceLayer.CategoryInterface;
-using Li_copy.DataLayer.CategoryDLL;
-using Li_copy.ServiceLayer.CategoryService;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,6 +65,7 @@ builder.Services.AddScoped<IloanDLL, LoanDLL>();
 builder.Services.AddScoped<IfineDLL, FineDLL>();
 builder.Services.AddScoped<INotificationDLL, NotificationDLL>();
 builder.Services.AddScoped<ICategoryDLL, CategoryDLL>();
+builder.Services.AddScoped<IReportDLL, ReportDLL>();
 
 //register service
 builder.Services.AddScoped<IRolesService, RoleService>();
@@ -73,7 +77,7 @@ builder.Services.AddScoped<IfineService, FineService>();
 builder.Services.AddScoped<IloanService, LoanService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICategoryServices, CategorySerive>();
-
+builder.Services.AddScoped<IReportService, ReportService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(options =>
