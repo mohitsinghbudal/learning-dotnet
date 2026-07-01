@@ -20,7 +20,7 @@ namespace Li_copy.DataLayer.Books
 
         public async Task<int> GetCount()
         {
-            string sql = "SELECT Count(*) FROM Books";
+            string sql = "SELECT SUM(AvailableCopies) FROM Books";
             return await _dbConn.ExecuteScalarAsync<int>(sql);
         }
         public async Task<IEnumerable<Book>> GetVerifiedBookAsync(int offset, int pagesize)
